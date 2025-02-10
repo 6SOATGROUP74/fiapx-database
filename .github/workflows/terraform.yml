@@ -1,0 +1,38 @@
+name: "Terraform Apply"
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  terraform:
+    name: "Terraform Apply"
+    runs-on: "ubuntu-22.04"
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'feature/')
+    steps:
+      - name: "Configure AWS Credentials"
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Terraform init"
+        working-directory: ./src
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: ./src
+        id: plan
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: ./src
+        if: success()
+        run: terraform apply -auto-approve tfplan
+  
