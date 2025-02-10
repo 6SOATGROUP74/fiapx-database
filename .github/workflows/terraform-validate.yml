@@ -1,0 +1,63 @@
+name: "Terraform Validadte and Plan"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  push:
+    branches:
+      - 'feature**'
+
+jobs:
+  terraform-validate-plan:
+    name: "Terraform validate and plan"
+    runs-on: "ubuntu-22.04"
+    steps:
+      - name: "Configure AWS Credentials"
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          
+
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Terraform init"
+        working-directory: ./src
+        run: terraform init
+
+      - name: "Terraform validate"
+        working-directory: ./src
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ./src
+        run: terraform plan -out=tfplan
+
+  create-pr:
+    needs: [terraform-validate-plan]
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v3
+
+    - name: Configure Git
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+    - name: Create Pull Request to develop
+      uses: peter-evans/create-pull-request@v7
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref }}
+        base: main
+        title: 'PR : Aberto via actions'
+        body: 'Bora Brasil !!!.'
